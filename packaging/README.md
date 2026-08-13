@@ -165,13 +165,34 @@ cd /workspace/ai-toolkit
 
 ## Шаг 7. Веса модели
 
-Веса в архив не входят и кладутся на сервер отдельно, тем же способом, что
-и архив окружения. Нужен полный снапшот репозитория `Qwen/Qwen-Image-2512`
-с подпапками `transformer`, `text_encoder`, `tokenizer`, `vae`.
+Веса в архив не входят. ai-toolkit умеет забирать их сам: если
+`model.name_or_path` - идентификатор репозитория (`Qwen/Qwen-Image-2512`),
+`QwenImageModel.load_model` передаёт его в `from_pretrained`, и
+`huggingface_hub` тянет `transformer`, `text_encoder`, `tokenizer` и `vae`
+в свой кеш (`HF_HOME`, по умолчанию `~/.cache/huggingface`). Ключ
+`extras_name_or_path` по умолчанию равен `name_or_path`, поэтому все
+компоненты берутся из одного репозитория.
 
-Путь к нему указывается в `model.name_or_path` конфига. Когда это существующая
-локальная папка с `text_encoder` внутри, ai-toolkit берёт из неё и трансформер,
-и все остальные компоненты, и в сеть не ходит.
+Сработает это только если с сервера дотягивается Hugging Face или его зеркало.
+Прямого интернета в контуре нет, поэтому перед первым запуском проверяем, ходит
+ли `huggingface_hub` куда-нибудь:
+
+```bash
+cd /workspace/ai-toolkit
+.venv/bin/python -c "
+from huggingface_hub import hf_hub_download
+print(hf_hub_download('Qwen/Qwen-Image-2512', 'model_index.json'))
+"
+```
+
+Команда вернула путь к файлу - веса скачаются сами, в конфиге можно оставить
+идентификатор репозитория. Упала на сети - веса кладутся на сервер заранее,
+а в `name_or_path` указывается путь к папке.
+
+Локальный путь распознаётся так: `load_model` проверяет `os.path.exists`,
+и если внутри есть подпапка `text_encoder`, считает папку полным чекпоинтом
+и берёт из неё все компоненты, никуда не обращаясь. Нужны подпапки
+`transformer`, `text_encoder`, `tokenizer`, `vae`.
 
 ## Шаг 8. Обучение LoRA
 
@@ -193,14 +214,18 @@ GPU="0"                                     # "0" или "1"
 cd /workspace/ai-toolkit || exit 1
 export CUDA_VISIBLE_DEVICES="$GPU"
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
-export HF_HUB_OFFLINE=1
+export HF_HUB_OFFLINE=1        # снять, если веса тянутся по сети (шаг 7)
 
 stdbuf -oL -eL "$VENV/python" run.py "$CFG" -l "$LOG"
 ```
 
 `-l` - собственный ключ `run.py`: он дублирует stdout и stderr в файл, внешний
-`tee` не нужен. `HF_HUB_OFFLINE=1` превращает любую случайную попытку сходить
-на Hugging Face в понятную ошибку вместо зависания на таймаутах.
+`tee` не нужен.
+
+`HF_HUB_OFFLINE=1` ставится под вариант с локальными весами: он превращает любую
+случайную попытку сходить на Hugging Face в понятную ошибку вместо зависания
+на таймаутах. Если по шагу 7 закачка работает, переменную задавать нельзя -
+она заблокирует и её.
 
 Обучение однопроцессное, `CUDA_VISIBLE_DEVICES` выбирает одну карту.
 
