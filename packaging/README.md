@@ -221,9 +221,15 @@ print(hf_hub_download('Qwen/Qwen-Image-2512', 'model_index.json'))
 
 ## Шаг 8. Обучение LoRA
 
-Конфиг лежит в `1_config_qwen_image_2512_lora/train_lora.yaml`. Перед запуском
-поправить в нём `datasets[0].folder_path` и, если нужно, `training_folder`.
-`model.name_or_path` менять не надо - веса тянутся по шагу 7.
+Конфиги берутся из `config/examples/` и кладутся в `config/` - так устроен
+сам инструмент, `config/*` у него в `.gitignore`. Для LoRA по Qwen-Image
+отправная точка - `config/examples/train_lora_qwen_image_24gb.yaml`.
+
+Что в нём поправить под этот сервер: `model.name_or_path` на
+`Qwen/Qwen-Image-2512`, `quantize`, `quantize_te` и `low_vram` в `false`
+(141 ГБ VRAM хватает на bf16), `datasets[0].folder_path` на свой датасет
+и `log_dir` - без него `BaseTrainProcess` не создаёт `SummaryWriter`,
+обучение идёт, а графиков нет.
 
 Датасет - папка с картинками, подпись к каждой лежит рядом в `.txt` с тем же
 именем.
@@ -233,7 +239,7 @@ mkdir -p /workspace/logs
 LOG="/workspace/logs/aitk_qwen_lora_$(date +%Y%m%d_%H%M%S).log"
 
 VENV="/workspace/ai-toolkit/.venv/bin"
-CFG="1_config_qwen_image_2512_lora/train_lora.yaml"
+CFG="config/train_lora_qwen_image_2512.yaml"
 GPU="0"                                     # "0" или "1"
 
 cd /workspace/ai-toolkit || exit 1
@@ -260,12 +266,9 @@ stdbuf -oL -eL "$VENV/python" run.py "$CFG" -l "$LOG"
 
 ```bash
 /workspace/ai-toolkit/.venv/bin/tensorboard \
-    --logdir "/workspace/ai-toolkit/1_config_qwen_image_2512_lora/logs" \
+    --logdir "<log_dir из конфига>" \
     --host 0.0.0.0 --port 6006
 ```
-
-Ключ `log_dir` в конфиге задан намеренно: без него `BaseTrainProcess`
-не создаёт `SummaryWriter`, обучение идёт, а графиков нет.
 
 ## Справка
 
