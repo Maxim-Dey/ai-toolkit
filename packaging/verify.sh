@@ -32,6 +32,7 @@ PY=/workspace/ai-toolkit/.venv/bin/python
 # torchcodec намеренно не импортируется: он dlopen'ит системный FFmpeg,
 # которого в архиве нет. Нужен только для видео- и аудиодатасетов.
 "$PY" - <<'PY'
+import os
 import sys
 
 import accelerate
@@ -58,6 +59,8 @@ print("opencv", cv2.__version__)
 print("av", av.__version__)
 print("tensorboard", tensorboard.__version__)
 print("cuda_available", torch.cuda.is_available())
+print("hf_endpoint", os.environ.get("HF_ENDPOINT", ""))
+print("hf_home", os.environ.get("HF_HOME", ""))
 PY
 
 "$PY" /workspace/ai-toolkit/run.py --help >/dev/null

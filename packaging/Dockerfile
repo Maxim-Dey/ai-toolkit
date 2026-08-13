@@ -97,4 +97,10 @@ RUN OPENCV_VERSION="$(uv pip show opencv-python | sed -n 's/^Version: //p')" && 
 
 COPY . ${PREFIX}
 
+# huggingface_hub читает HF_ENDPOINT при старте интерпретатора.
+# sitecustomize задаёт зеркало и кеш, чтобы на сервере ничего не настраивать.
+# setdefault: явный export в окружении по-прежнему сильнее.
+RUN cp ${PREFIX}/packaging/sitecustomize.py \
+        ${PREFIX}/.venv/lib/python${PY_VERSION}/site-packages/sitecustomize.py
+
 RUN uv cache clean
