@@ -1,0 +1,17 @@
+.git
+.github
+.venv
+venv
+.uv
+.node
+.ffmpeg
+python
+out_build
+output
+datasets
+models
+aitk_db.db*
+**/node_modules
+**/.next
+**/__pycache__
+**/*.pyc
