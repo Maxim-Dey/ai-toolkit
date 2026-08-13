@@ -3,9 +3,10 @@
 #   cd /workspace/ai-toolkit
 #   .venv/bin/python run.py 1_config_qwen_image_2512_lora/train_lora.yaml
 #
-# Веса в архив не входят. name_or_path указывает на локальный снапшот
-# репозитория Qwen/Qwen-Image-2512: в папке должны быть подпапки transformer,
-# text_encoder, tokenizer, vae - тогда ничего не качается из сети.
+# Веса в архив не входят, ai-toolkit скачивает их сам через huggingface_hub.
+# Куда он при этом ходит, задаёт .env в корне инструмента - см. шаг 7 в
+# packaging/README.md. Вместо идентификатора репозитория можно указать путь
+# к локальной папке с подпапками transformer, text_encoder, tokenizer, vae.
 job: extension
 config:
   name: "qwen_image_2512_lora_v1"
@@ -45,7 +46,7 @@ config:
         lr: 1e-4
         dtype: bf16
       model:
-        name_or_path: "/workspace/models/Qwen-Image-2512"
+        name_or_path: "Qwen/Qwen-Image-2512"
         arch: "qwen_image"
         # 141 ГБ VRAM хватает на bf16, квантизация и выгрузка не нужны
         quantize: false

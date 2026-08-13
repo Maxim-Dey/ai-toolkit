@@ -163,42 +163,67 @@ cd /workspace/ai-toolkit
 .venv/bin/python -m ipykernel install --user --name ai-toolkit
 ```
 
-## Шаг 7. Веса модели
+## Шаг 7. Настройка загрузки весов
 
-Веса в архив не входят. ai-toolkit умеет забирать их сам: если
+Веса в архив не входят - ai-toolkit скачивает их сам. Когда
 `model.name_or_path` - идентификатор репозитория (`Qwen/Qwen-Image-2512`),
 `QwenImageModel.load_model` передаёт его в `from_pretrained`, и
-`huggingface_hub` тянет `transformer`, `text_encoder`, `tokenizer` и `vae`
-в свой кеш (`HF_HOME`, по умолчанию `~/.cache/huggingface`). Ключ
-`extras_name_or_path` по умолчанию равен `name_or_path`, поэтому все
+`huggingface_hub` тянет `transformer`, `text_encoder`, `tokenizer` и `vae`.
+Ключ `extras_name_or_path` по умолчанию равен `name_or_path`, поэтому все
 компоненты берутся из одного репозитория.
 
-Сработает это только если с сервера дотягивается Hugging Face или его зеркало.
-Прямого интернета в контуре нет, поэтому перед первым запуском проверяем, ходит
-ли `huggingface_hub` куда-нибудь:
+Ходить наружу он должен через то же зеркало Artifactory, откуда качался архив.
+`huggingface_hub` собирает адрес как `{HF_ENDPOINT}/{repo}/resolve/{rev}/{file}`,
+то есть достаточно задать `HF_ENDPOINT` базой зеркала - получится ровно тот URL,
+которым выкачивался архив на шаге 4.
+
+Задаётся это один раз, файлом `.env` в корне инструмента. `run.py` первой же
+строкой вызывает `load_dotenv()`, до импорта `huggingface_hub`, поэтому
+переменные подхватываются сами при каждом запуске - экспортировать их руками
+в командах обучения не нужно:
 
 ```bash
 cd /workspace/ai-toolkit
+cat > .env <<'EOF'
+HF_ENDPOINT=https://binary.alfabank.ru/artifactory/api/huggingfaceml/huggingface
+HF_HOME=/workspace/hf-cache
+EOF
+```
+
+`HF_HOME` уводит кеш в рабочий раздел: по умолчанию `huggingface_hub` пишет
+в `~/.cache/huggingface`, а Qwen-Image-2512 в bf16 - это десятки гигабайт.
+
+В архив `.env` не кладётся намеренно: архив лежит в публичном репозитории
+на Hugging Face, и внутренних адресов в нём быть не должно. Поэтому файл
+создаётся на сервере после распаковки.
+
+Проверка до запуска обучения:
+
+```bash
+cd /workspace/ai-toolkit
+set -a; . ./.env; set +a
 .venv/bin/python -c "
-from huggingface_hub import hf_hub_download
+from huggingface_hub import HfApi, hf_hub_download
+print(len(HfApi().list_repo_files('Qwen/Qwen-Image-2512')), 'files')
 print(hf_hub_download('Qwen/Qwen-Image-2512', 'model_index.json'))
 "
 ```
 
-Команда вернула путь к файлу - веса скачаются сами, в конфиге можно оставить
-идентификатор репозитория. Упала на сети - веса кладутся на сервер заранее,
-а в `name_or_path` указывается путь к папке.
+`set -a; . ./.env` нужен только здесь: это ручной запуск python, а не `run.py`,
+и `load_dotenv()` в нём не отрабатывает.
 
-Локальный путь распознаётся так: `load_model` проверяет `os.path.exists`,
-и если внутри есть подпапка `text_encoder`, считает папку полным чекпоинтом
-и берёт из неё все компоненты, никуда не обращаясь. Нужны подпапки
-`transformer`, `text_encoder`, `tokenizer`, `vae`.
+Первая строка проверяет API со списком файлов, вторая - собственно скачивание.
+`from_pretrained` пользуется обоими. Если файл качается, а список репозитория
+не отдаётся, автозакачка не заработает: тогда веса выкачиваются `curl`-ом
+по тому же базовому URL и складываются в папку, а в `name_or_path` пишется
+путь к ней. Локальный путь распознаётся по `os.path.exists`, и при наличии
+внутри подпапки `text_encoder` папка считается полным чекпоинтом.
 
 ## Шаг 8. Обучение LoRA
 
 Конфиг лежит в `1_config_qwen_image_2512_lora/train_lora.yaml`. Перед запуском
-поправить в нём три пути: `model.name_or_path`, `datasets[0].folder_path`
-и, если нужно, `training_folder`.
+поправить в нём `datasets[0].folder_path` и, если нужно, `training_folder`.
+`model.name_or_path` менять не надо - веса тянутся по шагу 7.
 
 Датасет - папка с картинками, подпись к каждой лежит рядом в `.txt` с тем же
 именем.
@@ -214,18 +239,16 @@ GPU="0"                                     # "0" или "1"
 cd /workspace/ai-toolkit || exit 1
 export CUDA_VISIBLE_DEVICES="$GPU"
 export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
-export HF_HUB_OFFLINE=1        # снять, если веса тянутся по сети (шаг 7)
 
 stdbuf -oL -eL "$VENV/python" run.py "$CFG" -l "$LOG"
 ```
 
 `-l` - собственный ключ `run.py`: он дублирует stdout и stderr в файл, внешний
-`tee` не нужен.
+`tee` не нужен. `HF_ENDPOINT` и `HF_HOME` здесь не задаются - их подхватит
+`.env` из шага 7.
 
-`HF_HUB_OFFLINE=1` ставится под вариант с локальными весами: он превращает любую
-случайную попытку сходить на Hugging Face в понятную ошибку вместо зависания
-на таймаутах. Если по шагу 7 закачка работает, переменную задавать нельзя -
-она заблокирует и её.
+Первый запуск дольше остальных: на нём скачиваются веса. Дальше они берутся
+из кеша в `HF_HOME`.
 
 Обучение однопроцессное, `CUDA_VISIBLE_DEVICES` выбирает одну карту.
 
