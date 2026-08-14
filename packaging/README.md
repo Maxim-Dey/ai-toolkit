@@ -52,6 +52,10 @@ bash packaging/pack.sh
 `PACK_NAME` - префикс `PACK_` нужен потому, что `NAME` и `IMAGE` уже заняты
 в окружении WSL.
 
+`datasets/` попадает в архив с диска сборочной машины: в git папка не
+хранится, `pack.sh` копирует то, что лежит в `ai-toolkit/datasets/` на момент
+сборки. Перед запуском датасет должен быть на месте.
+
 Требования к сборочной машине: Docker и прямой доступ к `pypi.org`,
 `download.pytorch.org`, `pypi.nvidia.com`, `github.com`, `ghcr.io`,
 `public.ecr.aws`. Docker Hub не нужен - базовый образ из зеркала AWS ECR.
@@ -158,7 +162,7 @@ mkdir -p /home/jovyan/logs
 LOG="/home/jovyan/logs/aitk_train_$(date +%Y%m%d_%H%M%S).log"
 
 VENV="/workspace/ai-toolkit/.venv/bin"
-CFG="config/config_restyle_2.yaml"
+CFG="config/config_cH4r4c73r_PU5hY_v1.yaml"
 GPUS="0"                                                   # "0" или "1"
 
 {
