@@ -1,6 +1,11 @@
 import torch
 from typing import Optional
-from diffusers.optimization import SchedulerType, TYPE_TO_SCHEDULER_FUNCTION, get_constant_schedule_with_warmup
+from diffusers.optimization import (
+    SchedulerType,
+    TYPE_TO_SCHEDULER_FUNCTION,
+    get_constant_schedule_with_warmup,
+    get_cosine_schedule_with_warmup,
+)
 
 
 def get_lr_scheduler(
@@ -9,6 +14,11 @@ def get_lr_scheduler(
         **kwargs,
 ):
     if name == "cosine":
+        if 'num_warmup_steps' in kwargs:
+            if 'num_training_steps' not in kwargs and 'total_iters' in kwargs:
+                kwargs['num_training_steps'] = kwargs['total_iters']
+            kwargs.pop('total_iters', None)
+            return get_cosine_schedule_with_warmup(optimizer, **kwargs)
         if 'total_iters' in kwargs:
             kwargs['T_max'] = kwargs.pop('total_iters')
         return torch.optim.lr_scheduler.CosineAnnealingLR(
