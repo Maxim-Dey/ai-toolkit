@@ -61,6 +61,7 @@ print("tensorboard", tensorboard.__version__)
 print("cuda_available", torch.cuda.is_available())
 print("hf_endpoint", os.environ.get("HF_ENDPOINT", ""))
 print("hf_home", os.environ.get("HF_HOME", ""))
+print("hf_hub_disable_xet", os.environ.get("HF_HUB_DISABLE_XET", ""))
 PY
 
 "$PY" /workspace/ai-toolkit/run.py --help >/dev/null

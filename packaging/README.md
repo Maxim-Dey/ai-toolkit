@@ -25,9 +25,10 @@ CUDA Toolkit на сервере не нужен: колёса torch несут 
    и `pyvenv.cfg` остаются валидными после распаковки.
 2. В архив кладётся **собственный интерпретатор** (standalone CPython 3.12
    в `python/`). От сервера требуются только ядро, glibc и драйвер NVIDIA.
-3. `huggingface_hub` ходит на Hugging Face через зеркало Artifactory. Endpoint
-   и кеш (`/workspace/hf-cache`) заданы в `sitecustomize.py` внутри `.venv`,
-   поэтому любой вызов `.venv/bin/python` подхватывает их сам.
+3. `huggingface_hub` ходит на Hugging Face через зеркало Artifactory. Endpoint,
+   кеш (`/workspace/hf-cache`) и `HF_HUB_DISABLE_XET=1` заданы в
+   `sitecustomize.py` внутри `.venv`. Без отключения Xet загрузка весов бьёт
+   в `/api/models/.../xet-read-token/` и получает 404 от зеркала.
 
 Архив создаётся `tar` внутри контейнера, а не на хосте: файловая система Windows
 не умеет представлять симлинки и биты прав, которые есть в venv.
@@ -85,6 +86,7 @@ opencv 4.11.0
 cuda_available False
 hf_endpoint https://binary.alfabank.ru/artifactory/api/huggingfaceml/huggingface
 hf_home /workspace/hf-cache
+hf_hub_disable_xet 1
 ENTRYPOINT_OK
 ```
 
@@ -173,6 +175,7 @@ GPUS="0"                                                   # "0" или "1"
 
   export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True;
   export CUDA_VISIBLE_DEVICES="$GPUS";
+  export HF_HUB_DISABLE_XET=1;
   echo "CUDA_VISIBLE_DEVICES=$CUDA_VISIBLE_DEVICES";
   echo "HF_ENDPOINT=$("$VENV/python" -c 'import os; print(os.environ.get("HF_ENDPOINT", ""))')";
 
