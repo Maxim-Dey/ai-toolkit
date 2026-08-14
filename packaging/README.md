@@ -149,6 +149,50 @@ cd /workspace/ai-toolkit
 
 Интерпретатор вызывается по полному пути, активировать окружение не нужно.
 
+## Шаг 7. Запуск обучения
+
+Конфиг - yaml в `config/`. `run.py` запускается из корня инструмента.
+
+```bash
+mkdir -p /home/jovyan/logs
+LOG="/home/jovyan/logs/aitk_train_$(date +%Y%m%d_%H%M%S).log"
+
+VENV="/workspace/ai-toolkit/.venv/bin"
+CFG="config/config_restyle_2.yaml"
+GPUS="0"                                                   # "0" или "1"
+
+{
+  echo "=== START $(date -Is) ===";
+  echo "LOG=$LOG";
+
+  cd /workspace/ai-toolkit || exit 1;
+
+  export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True;
+  export CUDA_VISIBLE_DEVICES="$GPUS";
+  echo "CUDA_VISIBLE_DEVICES=$CUDA_VISIBLE_DEVICES";
+  echo "HF_ENDPOINT=$("$VENV/python" -c 'import os; print(os.environ.get("HF_ENDPOINT", ""))')";
+
+  echo "=== TRAINING ===";
+  "$VENV/python" -u run.py "$CFG";
+
+  EXIT=$?;
+  echo "=== END $(date -Is) exit=$EXIT ===";
+  exit $EXIT;
+} 2>&1 | tee -a "$LOG"
+```
+
+### Выбор видеокарты
+
+Меняется одна строка `GPUS`:
+
+| `GPUS` | что запустится |
+| --- | --- |
+| `"0"` | GPU 0 |
+| `"1"` | GPU 1 |
+
+Обучение однопроцессное. Запустить на обеих картах одновременно нельзя
+одной командой - второй запуск с другим `GPUS` и другим `CFG`/`LOG`.
+
 ## Справка
 
 ### Выбор версии CUDA
