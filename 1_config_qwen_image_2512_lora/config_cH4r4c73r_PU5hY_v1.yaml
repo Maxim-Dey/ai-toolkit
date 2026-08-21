@@ -1,0 +1,113 @@
+job: extension
+config:
+  name: cH4r4c73r_PU5hY_v1
+  process:
+  - type: diffusion_trainer
+    training_folder: /workspace/ai-toolkit/output
+    sqlite_db_path: /workspace/ai-toolkit/aitk_db.db
+    device: cuda:0
+    trigger_word: cH4r4c73r_PU5hY
+    performance_log_every: 100
+    network:
+      type: lora
+      linear: 64
+      linear_alpha: 32
+      conv: 32
+      conv_alpha: 16
+      lokr_full_rank: true
+      lokr_factor: -1
+      network_kwargs:
+        ignore_if_contains: []
+    save:
+      dtype: bf16
+      save_every: 25
+      max_step_saves_to_keep: 25
+      save_format: diffusers
+      push_to_hub: false
+    datasets:
+    - folder_path: /workspace/ai-toolkit/datasets/cH4r4c73r_PU5hY
+      mask_path: null
+      mask_min_value: 0.1
+      default_caption: ''
+      caption_ext: txt
+      caption_dropout_rate: 0.05
+      cache_latents_to_disk: false
+      is_reg: false
+      network_weight: 1
+      resolution:
+      - 1024
+      controls: []
+      shrink_video_to_frames: true
+      num_frames: 1
+      do_i2v: true
+      flip_x: false
+      flip_y: false
+    train:
+      batch_size: 9
+      bypass_guidance_embedding: false
+      steps: 2000
+      gradient_accumulation: 4
+      train_unet: true
+      train_text_encoder: false
+      gradient_checkpointing: true
+      noise_scheduler: flowmatch
+      optimizer: adamw8bit
+      timestep_type: weighted
+      content_or_style: balanced
+      optimizer_params:
+        weight_decay: 0.0001
+      unload_text_encoder: false
+      cache_text_embeddings: true
+      lr: 0.0003
+      lr_scheduler: cosine
+      lr_scheduler_params:
+        num_warmup_steps: 200
+      ema_config:
+        use_ema: true
+        ema_decay: 0.99
+      skip_first_sample: false
+      force_first_sample: false
+      disable_sampling: false
+      dtype: bf16
+      diff_output_preservation: false
+      diff_output_preservation_multiplier: 1
+      diff_output_preservation_class: person
+      switch_boundary_every: 1
+      loss_type: mse
+    log_dir: /workspace/ai-toolkit/output/logs
+    logging:
+      log_every: 1
+      use_ui_logger: false
+    model:
+      name_or_path: Qwen/Qwen-Image-2512
+      quantize: true
+      qtype: qfloat8
+      quantize_te: true
+      qtype_te: qfloat8
+      arch: qwen_image:2512
+      low_vram: false
+      model_kwargs: {}
+      layer_offloading: false
+      layer_offloading_text_encoder_percent: 1
+      layer_offloading_transformer_percent: 1
+    sample:
+      sampler: flowmatch
+      sample_every: 25
+      width: 1024
+      height: 1024
+      samples:
+      - prompt: Looking to the right, the character Pushy with a mischievous cheerful expression on his face is sticking out his tongue and standing on a gray floor. The character is holding an unfolded book with leather cover in both hands. Around the character, books and magazines are scattered on the gray floor. The background is blue.
+      - prompt: A character Pushy with squinted eyes and an open mouth expresses delight and jubilation. The character is holding a toy rocket in front of itself with both paws. The background is purple.
+      - prompt: A character Pushy with closed eyes and a slight satisfied smile. The character is holding in front of itself with both paws a purple coin with a gold symbol '₽' in the center. The background is blue.
+      - prompt: Pusha’s character looks straight ahead with a sly smirk. The character is wearing zombie-style Halloween makeup. The background is light purple.
+      - prompt: A character Pushy with a pleased expression and a slight sly smile, looking slightly to the side. The character is standing and holding a large percent symbol '%' in front of itself with both paws. The background is light green.
+      neg: ''
+      seed: 1000
+      walk_seed: false
+      guidance_scale: 4
+      sample_steps: 20
+      num_frames: 1
+      fps: 1
+meta:
+  name: cH4r4c73r_PU5hY_v1
+  version: '1.0'
